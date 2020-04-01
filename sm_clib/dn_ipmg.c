@@ -10,6 +10,9 @@ C library to connect to a SmartMesh IP Manager.
 #include "dn_lock.h"
 #include "dn_serial_mg.h"
 
+#include <stdio.h>
+#include <string.h>
+
 //=========================== variables =======================================
 
 typedef struct {
@@ -160,6 +163,9 @@ dn_err_t dn_ipmg_reset(uint8_t type, uint8_t* macAddress, dn_ipmg_reset_rpt* rep
    dn_ipmg_vars.outputBuf[DN_RESET_REQ_OFFS_TYPE] = type;
    memcpy(&dn_ipmg_vars.outputBuf[DN_RESET_REQ_OFFS_MACADDRESS],macAddress,8);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_RESET,                                              // cmdId
@@ -169,9 +175,9 @@ dn_err_t dn_ipmg_reset(uint8_t type, uint8_t* macAddress, dn_ipmg_reset_rpt* rep
       dn_ipmg_reset_reply                                       // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -240,6 +246,9 @@ dn_err_t dn_ipmg_subscribe(uint32_t filter, uint32_t unackFilter, dn_ipmg_subscr
    uint8_t    extraFlags;
    dn_err_t   rc;
    
+   // cancel previous transmition
+   dn_ipmg_cancelTx();
+
    // lock the module
    dn_lock();
    
@@ -247,7 +256,7 @@ dn_err_t dn_ipmg_subscribe(uint32_t filter, uint32_t unackFilter, dn_ipmg_subscr
    if (dn_ipmg_vars.busyTx) {
       // unlock the module
       dn_unlock();
-      
+      printf("Uart BUSY!");
       // return
       return DN_ERR_BUSY;
    }
@@ -263,6 +272,9 @@ dn_err_t dn_ipmg_subscribe(uint32_t filter, uint32_t unackFilter, dn_ipmg_subscr
    dn_write_uint32_t(&dn_ipmg_vars.outputBuf[DN_SUBSCRIBE_REQ_OFFS_FILTER],filter);
    dn_write_uint32_t(&dn_ipmg_vars.outputBuf[DN_SUBSCRIBE_REQ_OFFS_UNACKFILTER],unackFilter);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SUBSCRIBE,                                          // cmdId
@@ -272,9 +284,9 @@ dn_err_t dn_ipmg_subscribe(uint32_t filter, uint32_t unackFilter, dn_ipmg_subscr
       dn_ipmg_subscribe_reply                                   // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -287,6 +299,8 @@ dn_err_t dn_ipmg_subscribe(uint32_t filter, uint32_t unackFilter, dn_ipmg_subscr
 void dn_ipmg_subscribe_reply(uint8_t cmdId, uint8_t rc, uint8_t* payload, uint8_t len) {
    dn_ipmg_subscribe_rpt* reply;
    
+
+
    // verify I'm expecting this answer
    if (dn_ipmg_vars.busyTx==FALSE || dn_ipmg_vars.cmdId!=cmdId) {
       return;
@@ -302,7 +316,7 @@ void dn_ipmg_subscribe_reply(uint8_t cmdId, uint8_t rc, uint8_t* payload, uint8_
    
    // parse returned value (iff RC==0)
    if (rc==DN_SERIAL_RC_OK) {
-      
+
    }
    
    // call the callback
@@ -344,6 +358,9 @@ dn_err_t dn_ipmg_getTime(dn_ipmg_getTime_rpt* reply) {
    // extraFlags
    extraFlags = 0x00;
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // build outputBuf
    
    // send outputBuf
@@ -355,9 +372,9 @@ dn_err_t dn_ipmg_getTime(dn_ipmg_getTime_rpt* reply) {
       dn_ipmg_getTime_reply                                     // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -460,6 +477,9 @@ dn_err_t dn_ipmg_setNetworkConfig(uint16_t networkId, int8_t apTxPower, uint8_t 
    dn_write_uint16_t(&dn_ipmg_vars.outputBuf[DN_SETNETWORKCONFIG_REQ_OFFS_BWMULT],bwMult);
    dn_ipmg_vars.outputBuf[DN_SETNETWORKCONFIG_REQ_OFFS_ONECHANNEL] = oneChannel;
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SETNETWORKCONFIG,                                   // cmdId
@@ -469,9 +489,9 @@ dn_err_t dn_ipmg_setNetworkConfig(uint16_t networkId, int8_t apTxPower, uint8_t 
       dn_ipmg_setNetworkConfig_reply                            // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -540,6 +560,9 @@ dn_err_t dn_ipmg_clearStatistics(dn_ipmg_clearStatistics_rpt* reply) {
    
    // build outputBuf
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_CLEARSTATISTICS,                                    // cmdId
@@ -549,9 +572,9 @@ dn_err_t dn_ipmg_clearStatistics(dn_ipmg_clearStatistics_rpt* reply) {
       dn_ipmg_clearStatistics_reply                             // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -625,6 +648,9 @@ dn_err_t dn_ipmg_exchangeMoteJoinKey(uint8_t* macAddress, uint8_t* key, dn_ipmg_
    memcpy(&dn_ipmg_vars.outputBuf[DN_EXCHANGEMOTEJOINKEY_REQ_OFFS_MACADDRESS],macAddress,8);
    memcpy(&dn_ipmg_vars.outputBuf[DN_EXCHANGEMOTEJOINKEY_REQ_OFFS_KEY],key,16);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_EXCHANGEMOTEJOINKEY,                                // cmdId
@@ -634,9 +660,9 @@ dn_err_t dn_ipmg_exchangeMoteJoinKey(uint8_t* macAddress, uint8_t* key, dn_ipmg_
       dn_ipmg_exchangeMoteJoinKey_reply                         // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -712,6 +738,9 @@ dn_err_t dn_ipmg_exchangeNetworkId(uint16_t id, dn_ipmg_exchangeNetworkId_rpt* r
    // build outputBuf
    dn_write_uint16_t(&dn_ipmg_vars.outputBuf[DN_EXCHANGENETWORKID_REQ_OFFS_ID],id);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_EXCHANGENETWORKID,                                  // cmdId
@@ -721,9 +750,9 @@ dn_err_t dn_ipmg_exchangeNetworkId(uint16_t id, dn_ipmg_exchangeNetworkId_rpt* r
       dn_ipmg_exchangeNetworkId_reply                           // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -853,6 +882,9 @@ dn_err_t dn_ipmg_radiotestTx(uint8_t testType, uint16_t chanMask, uint16_t repea
    dn_write_uint16_t(&dn_ipmg_vars.outputBuf[DN_RADIOTESTTX_REQ_OFFS_DELAY_10],delay_10);
    dn_ipmg_vars.outputBuf[DN_RADIOTESTTX_REQ_OFFS_STATIONID] = stationId;
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_RADIOTESTTX,                                        // cmdId
@@ -862,9 +894,9 @@ dn_err_t dn_ipmg_radiotestTx(uint8_t testType, uint16_t chanMask, uint16_t repea
       dn_ipmg_radiotestTx_reply                                 // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -948,6 +980,9 @@ dn_err_t dn_ipmg_radiotestRx(uint16_t mask, uint16_t duration, uint8_t stationId
    dn_write_uint16_t(&dn_ipmg_vars.outputBuf[DN_RADIOTESTRX_REQ_OFFS_DURATION],duration);
    dn_ipmg_vars.outputBuf[DN_RADIOTESTRX_REQ_OFFS_STATIONID] = stationId;
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_RADIOTESTRX,                                        // cmdId
@@ -957,9 +992,9 @@ dn_err_t dn_ipmg_radiotestRx(uint16_t mask, uint16_t duration, uint8_t stationId
       dn_ipmg_radiotestRx_reply                                 // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -1029,6 +1064,9 @@ dn_err_t dn_ipmg_getRadiotestStatistics(dn_ipmg_getRadiotestStatistics_rpt* repl
    
    // build outputBuf
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETRADIOTESTSTATISTICS,                             // cmdId
@@ -1038,9 +1076,9 @@ dn_err_t dn_ipmg_getRadiotestStatistics(dn_ipmg_getRadiotestStatistics_rpt* repl
       dn_ipmg_getRadiotestStatistics_reply                      // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -1116,6 +1154,9 @@ dn_err_t dn_ipmg_setACLEntry(uint8_t* macAddress, uint8_t* joinKey, dn_ipmg_setA
    memcpy(&dn_ipmg_vars.outputBuf[DN_SETACLENTRY_REQ_OFFS_MACADDRESS],macAddress,8);
    memcpy(&dn_ipmg_vars.outputBuf[DN_SETACLENTRY_REQ_OFFS_JOINKEY],joinKey,16);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SETACLENTRY,                                        // cmdId
@@ -1125,9 +1166,9 @@ dn_err_t dn_ipmg_setACLEntry(uint8_t* macAddress, uint8_t* joinKey, dn_ipmg_setA
       dn_ipmg_setACLEntry_reply                                 // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -1198,6 +1239,9 @@ dn_err_t dn_ipmg_getNextACLEntry(uint8_t* macAddress, dn_ipmg_getNextACLEntry_rp
    // extraFlags
    extraFlags = 0x00;
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // build outputBuf
    memcpy(&dn_ipmg_vars.outputBuf[DN_GETNEXTACLENTRY_REQ_OFFS_MACADDRESS],macAddress,8);
    
@@ -1210,9 +1254,9 @@ dn_err_t dn_ipmg_getNextACLEntry(uint8_t* macAddress, dn_ipmg_getNextACLEntry_rp
       dn_ipmg_getNextACLEntry_reply                             // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -1288,6 +1332,9 @@ dn_err_t dn_ipmg_deleteACLEntry(uint8_t* macAddress, dn_ipmg_deleteACLEntry_rpt*
    // build outputBuf
    memcpy(&dn_ipmg_vars.outputBuf[DN_DELETEACLENTRY_REQ_OFFS_MACADDRESS],macAddress,8);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_DELETEACLENTRY,                                     // cmdId
@@ -1297,9 +1344,9 @@ dn_err_t dn_ipmg_deleteACLEntry(uint8_t* macAddress, dn_ipmg_deleteACLEntry_rpt*
       dn_ipmg_deleteACLEntry_reply                              // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -1373,6 +1420,9 @@ dn_err_t dn_ipmg_pingMote(uint8_t* macAddress, dn_ipmg_pingMote_rpt* reply) {
    // build outputBuf
    memcpy(&dn_ipmg_vars.outputBuf[DN_PINGMOTE_REQ_OFFS_MACADDRESS],macAddress,8);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_PINGMOTE,                                           // cmdId
@@ -1382,9 +1432,9 @@ dn_err_t dn_ipmg_pingMote(uint8_t* macAddress, dn_ipmg_pingMote_rpt* reply) {
       dn_ipmg_pingMote_reply                                    // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -1458,6 +1508,9 @@ dn_err_t dn_ipmg_getLog(uint8_t* macAddress, dn_ipmg_getLog_rpt* reply) {
    // build outputBuf
    memcpy(&dn_ipmg_vars.outputBuf[DN_GETLOG_REQ_OFFS_MACADDRESS],macAddress,8);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETLOG,                                             // cmdId
@@ -1467,9 +1520,9 @@ dn_err_t dn_ipmg_getLog(uint8_t* macAddress, dn_ipmg_getLog_rpt* reply) {
       dn_ipmg_getLog_reply                                      // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -1554,6 +1607,9 @@ dn_err_t dn_ipmg_sendData(uint8_t* macAddress, uint8_t priority, uint16_t srcPor
    dn_ipmg_vars.outputBuf[DN_SENDDATA_REQ_OFFS_OPTIONS] = options;
    memcpy(&dn_ipmg_vars.outputBuf[DN_SENDDATA_REQ_OFFS_DATA],data,dataLen);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SENDDATA,                                           // cmdId
@@ -1563,9 +1619,9 @@ dn_err_t dn_ipmg_sendData(uint8_t* macAddress, uint8_t priority, uint16_t srcPor
       dn_ipmg_sendData_reply                                    // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -1642,6 +1698,9 @@ dn_err_t dn_ipmg_startNetwork(dn_ipmg_startNetwork_rpt* reply) {
    
    // build outputBuf
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_STARTNETWORK,                                       // cmdId
@@ -1651,9 +1710,9 @@ dn_err_t dn_ipmg_startNetwork(dn_ipmg_startNetwork_rpt* reply) {
       dn_ipmg_startNetwork_reply                                // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -1722,6 +1781,9 @@ dn_err_t dn_ipmg_getSystemInfo(dn_ipmg_getSystemInfo_rpt* reply) {
    
    // build outputBuf
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETSYSTEMINFO,                                      // cmdId
@@ -1731,9 +1793,9 @@ dn_err_t dn_ipmg_getSystemInfo(dn_ipmg_getSystemInfo_rpt* reply) {
       dn_ipmg_getSystemInfo_reply                               // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -1822,6 +1884,9 @@ dn_err_t dn_ipmg_getMoteConfig(uint8_t* macAddress, bool next, dn_ipmg_getMoteCo
    memcpy(&dn_ipmg_vars.outputBuf[DN_GETMOTECONFIG_REQ_OFFS_MACADDRESS],macAddress,8);
    dn_ipmg_vars.outputBuf[DN_GETMOTECONFIG_REQ_OFFS_NEXT] = next;
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETMOTECONFIG,                                      // cmdId
@@ -1831,9 +1896,9 @@ dn_err_t dn_ipmg_getMoteConfig(uint8_t* macAddress, bool next, dn_ipmg_getMoteCo
       dn_ipmg_getMoteConfig_reply                               // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -1912,6 +1977,9 @@ dn_err_t dn_ipmg_getPathInfo(uint8_t* source, uint8_t* dest, dn_ipmg_getPathInfo
    memcpy(&dn_ipmg_vars.outputBuf[DN_GETPATHINFO_REQ_OFFS_SOURCE],source,8);
    memcpy(&dn_ipmg_vars.outputBuf[DN_GETPATHINFO_REQ_OFFS_DEST],dest,8);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETPATHINFO,                                        // cmdId
@@ -1921,9 +1989,9 @@ dn_err_t dn_ipmg_getPathInfo(uint8_t* source, uint8_t* dest, dn_ipmg_getPathInfo
       dn_ipmg_getPathInfo_reply                                 // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2008,6 +2076,9 @@ dn_err_t dn_ipmg_getNextPathInfo(uint8_t* macAddress, uint8_t filter, uint16_t p
    dn_ipmg_vars.outputBuf[DN_GETNEXTPATHINFO_REQ_OFFS_FILTER] = filter;
    dn_write_uint16_t(&dn_ipmg_vars.outputBuf[DN_GETNEXTPATHINFO_REQ_OFFS_PATHID],pathId);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETNEXTPATHINFO,                                    // cmdId
@@ -2017,9 +2088,9 @@ dn_err_t dn_ipmg_getNextPathInfo(uint8_t* macAddress, uint8_t filter, uint16_t p
       dn_ipmg_getNextPathInfo_reply                             // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2101,6 +2172,9 @@ dn_err_t dn_ipmg_setAdvertising(uint8_t activate, dn_ipmg_setAdvertising_rpt* re
    // build outputBuf
    dn_ipmg_vars.outputBuf[DN_SETADVERTISING_REQ_OFFS_ACTIVATE] = activate;
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SETADVERTISING,                                     // cmdId
@@ -2110,9 +2184,9 @@ dn_err_t dn_ipmg_setAdvertising(uint8_t activate, dn_ipmg_setAdvertising_rpt* re
       dn_ipmg_setAdvertising_reply                              // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2191,6 +2265,9 @@ dn_err_t dn_ipmg_setDownstreamFrameMode(uint8_t frameMode, dn_ipmg_setDownstream
    // build outputBuf
    dn_ipmg_vars.outputBuf[DN_SETDOWNSTREAMFRAMEMODE_REQ_OFFS_FRAMEMODE] = frameMode;
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SETDOWNSTREAMFRAMEMODE,                             // cmdId
@@ -2200,9 +2277,9 @@ dn_err_t dn_ipmg_setDownstreamFrameMode(uint8_t frameMode, dn_ipmg_setDownstream
       dn_ipmg_setDownstreamFrameMode_reply                      // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2276,6 +2353,9 @@ dn_err_t dn_ipmg_getManagerStatistics(dn_ipmg_getManagerStatistics_rpt* reply) {
    
    // build outputBuf
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETMANAGERSTATISTICS,                               // cmdId
@@ -2285,9 +2365,9 @@ dn_err_t dn_ipmg_getManagerStatistics(dn_ipmg_getManagerStatistics_rpt* reply) {
       dn_ipmg_getManagerStatistics_reply                        // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2381,6 +2461,9 @@ dn_err_t dn_ipmg_setTime(uint8_t trigger, uint8_t* utcSecs, uint32_t utcUsecs, d
    memcpy(&dn_ipmg_vars.outputBuf[DN_SETTIME_REQ_OFFS_UTCSECS],utcSecs,8);
    dn_write_uint32_t(&dn_ipmg_vars.outputBuf[DN_SETTIME_REQ_OFFS_UTCUSECS],utcUsecs);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SETTIME,                                            // cmdId
@@ -2390,9 +2473,9 @@ dn_err_t dn_ipmg_setTime(uint8_t trigger, uint8_t* utcSecs, uint32_t utcUsecs, d
       dn_ipmg_setTime_reply                                     // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2460,6 +2543,9 @@ dn_err_t dn_ipmg_getLicense(dn_ipmg_getLicense_rpt* reply) {
    
    // build outputBuf
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETLICENSE,                                         // cmdId
@@ -2469,9 +2555,9 @@ dn_err_t dn_ipmg_getLicense(dn_ipmg_getLicense_rpt* reply) {
       dn_ipmg_getLicense_reply                                  // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2547,6 +2633,9 @@ dn_err_t dn_ipmg_setLicense(uint8_t* license, dn_ipmg_setLicense_rpt* reply) {
    // build outputBuf
    memcpy(&dn_ipmg_vars.outputBuf[DN_SETLICENSE_REQ_OFFS_LICENSE],license,13);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SETLICENSE,                                         // cmdId
@@ -2556,9 +2645,9 @@ dn_err_t dn_ipmg_setLicense(uint8_t* license, dn_ipmg_setLicense_rpt* reply) {
       dn_ipmg_setLicense_reply                                  // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2632,6 +2721,9 @@ dn_err_t dn_ipmg_setCLIUser(uint8_t role, uint8_t* password, dn_ipmg_setCLIUser_
    dn_ipmg_vars.outputBuf[DN_SETCLIUSER_REQ_OFFS_ROLE] = role;
    memcpy(&dn_ipmg_vars.outputBuf[DN_SETCLIUSER_REQ_OFFS_PASSWORD],password,16);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SETCLIUSER,                                         // cmdId
@@ -2641,9 +2733,9 @@ dn_err_t dn_ipmg_setCLIUser(uint8_t role, uint8_t* password, dn_ipmg_setCLIUser_
       dn_ipmg_setCLIUser_reply                                  // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2727,6 +2819,9 @@ dn_err_t dn_ipmg_sendIP(uint8_t* macAddress, uint8_t priority, uint8_t options, 
    dn_ipmg_vars.outputBuf[DN_SENDIP_REQ_OFFS_ENCRYPTEDOFFSET] = encryptedOffset;
    memcpy(&dn_ipmg_vars.outputBuf[DN_SENDIP_REQ_OFFS_DATA],data,dataLen);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SENDIP,                                             // cmdId
@@ -2736,9 +2831,9 @@ dn_err_t dn_ipmg_sendIP(uint8_t* macAddress, uint8_t priority, uint8_t options, 
       dn_ipmg_sendIP_reply                                      // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2812,6 +2907,9 @@ dn_err_t dn_ipmg_restoreFactoryDefaults(dn_ipmg_restoreFactoryDefaults_rpt* repl
    
    // build outputBuf
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_RESTOREFACTORYDEFAULTS,                             // cmdId
@@ -2821,9 +2919,9 @@ dn_err_t dn_ipmg_restoreFactoryDefaults(dn_ipmg_restoreFactoryDefaults_rpt* repl
       dn_ipmg_restoreFactoryDefaults_reply                      // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2892,6 +2990,9 @@ dn_err_t dn_ipmg_getMoteInfo(uint8_t* macAddress, dn_ipmg_getMoteInfo_rpt* reply
    // build outputBuf
    memcpy(&dn_ipmg_vars.outputBuf[DN_GETMOTEINFO_REQ_OFFS_MACADDRESS],macAddress,8);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETMOTEINFO,                                        // cmdId
@@ -2901,9 +3002,9 @@ dn_err_t dn_ipmg_getMoteInfo(uint8_t* macAddress, dn_ipmg_getMoteInfo_rpt* reply
       dn_ipmg_getMoteInfo_reply                                 // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -2985,6 +3086,9 @@ dn_err_t dn_ipmg_getNetworkConfig(dn_ipmg_getNetworkConfig_rpt* reply) {
    
    // build outputBuf
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETNETWORKCONFIG,                                   // cmdId
@@ -2994,9 +3098,9 @@ dn_err_t dn_ipmg_getNetworkConfig(dn_ipmg_getNetworkConfig_rpt* reply) {
       dn_ipmg_getNetworkConfig_reply                            // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -3083,6 +3187,9 @@ dn_err_t dn_ipmg_getNetworkInfo(dn_ipmg_getNetworkInfo_rpt* reply) {
    
    // build outputBuf
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETNETWORKINFO,                                     // cmdId
@@ -3092,9 +3199,9 @@ dn_err_t dn_ipmg_getNetworkInfo(dn_ipmg_getNetworkInfo_rpt* reply) {
       dn_ipmg_getNetworkInfo_reply                              // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -3178,6 +3285,9 @@ dn_err_t dn_ipmg_getMoteConfigById(uint16_t moteId, dn_ipmg_getMoteConfigById_rp
    // build outputBuf
    dn_write_uint16_t(&dn_ipmg_vars.outputBuf[DN_GETMOTECONFIGBYID_REQ_OFFS_MOTEID],moteId);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETMOTECONFIGBYID,                                  // cmdId
@@ -3187,9 +3297,9 @@ dn_err_t dn_ipmg_getMoteConfigById(uint16_t moteId, dn_ipmg_getMoteConfigById_rp
       dn_ipmg_getMoteConfigById_reply                           // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -3268,6 +3378,9 @@ dn_err_t dn_ipmg_setCommonJoinKey(uint8_t* key, dn_ipmg_setCommonJoinKey_rpt* re
    // build outputBuf
    memcpy(&dn_ipmg_vars.outputBuf[DN_SETCOMMONJOINKEY_REQ_OFFS_KEY],key,16);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SETCOMMONJOINKEY,                                   // cmdId
@@ -3277,9 +3390,9 @@ dn_err_t dn_ipmg_setCommonJoinKey(uint8_t* key, dn_ipmg_setCommonJoinKey_rpt* re
       dn_ipmg_setCommonJoinKey_reply                            // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -3348,6 +3461,9 @@ dn_err_t dn_ipmg_getIPConfig(dn_ipmg_getIPConfig_rpt* reply) {
    
    // build outputBuf
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETIPCONFIG,                                        // cmdId
@@ -3357,9 +3473,9 @@ dn_err_t dn_ipmg_getIPConfig(dn_ipmg_getIPConfig_rpt* reply) {
       dn_ipmg_getIPConfig_reply                                 // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -3437,6 +3553,9 @@ dn_err_t dn_ipmg_setIPConfig(uint8_t* ipv6Address, uint8_t* mask, dn_ipmg_setIPC
    memcpy(&dn_ipmg_vars.outputBuf[DN_SETIPCONFIG_REQ_OFFS_IPV6ADDRESS],ipv6Address,16);
    memcpy(&dn_ipmg_vars.outputBuf[DN_SETIPCONFIG_REQ_OFFS_MASK],mask,16);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_SETIPCONFIG,                                        // cmdId
@@ -3446,9 +3565,9 @@ dn_err_t dn_ipmg_setIPConfig(uint8_t* ipv6Address, uint8_t* mask, dn_ipmg_setIPC
       dn_ipmg_setIPConfig_reply                                 // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -3518,6 +3637,9 @@ dn_err_t dn_ipmg_deleteMote(uint8_t* macAddress, dn_ipmg_deleteMote_rpt* reply) 
    // build outputBuf
    memcpy(&dn_ipmg_vars.outputBuf[DN_DELETEMOTE_REQ_OFFS_MACADDRESS],macAddress,8);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_DELETEMOTE,                                         // cmdId
@@ -3527,9 +3649,9 @@ dn_err_t dn_ipmg_deleteMote(uint8_t* macAddress, dn_ipmg_deleteMote_rpt* reply) 
       dn_ipmg_deleteMote_reply                                  // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module
@@ -3604,6 +3726,9 @@ dn_err_t dn_ipmg_getMoteLinks(uint8_t* macAddress, uint16_t idx, dn_ipmg_getMote
    memcpy(&dn_ipmg_vars.outputBuf[DN_GETMOTELINKS_REQ_OFFS_MACADDRESS],macAddress,8);
    dn_write_uint16_t(&dn_ipmg_vars.outputBuf[DN_GETMOTELINKS_REQ_OFFS_IDX],idx);
    
+   // I'm now busy transmitting
+         dn_ipmg_vars.busyTx         = TRUE;
+
    // send outputBuf
    rc = dn_serial_mg_sendRequest(
       CMDID_GETMOTELINKS,                                       // cmdId
@@ -3613,9 +3738,9 @@ dn_err_t dn_ipmg_getMoteLinks(uint8_t* macAddress, uint16_t idx, dn_ipmg_getMote
       dn_ipmg_getMoteLinks_reply                                // replyCb
    );
    
-   if (rc==DN_ERR_NONE) {
-      // I'm now busy transmitting
-      dn_ipmg_vars.busyTx         = TRUE;
+   if (rc!=DN_ERR_NONE) {
+      // I'm not busy transmitting
+      dn_ipmg_vars.busyTx         = FALSE;
    }
    
    // unlock the module

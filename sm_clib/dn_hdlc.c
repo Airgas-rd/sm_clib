@@ -5,7 +5,7 @@ HDLC library.
 
 \license See attached DN_LICENSE.txt.
 */
-
+#include <stdio.h>
 #include "dn_hdlc.h"
 #include "dn_uart.h"
 #include "dn_lock.h"
@@ -75,7 +75,7 @@ void dn_hdlc_rxByte(uint8_t rxbyte) {
          rxbyte!=DN_HDLC_FLAG
       ) {
       // start of frame
-      
+      //printf("S Frame\n!");
       // I'm now receiving
       dn_hdlc_vars.busyReceiving       = TRUE;
       
@@ -110,6 +110,7 @@ void dn_hdlc_rxByte(uint8_t rxbyte) {
       if (dn_hdlc_vars.inputBufFill==0) {
          // invalid HDLC frame
       } else {
+    	  //printf("\nEnd FRM\n!");
          // hand over frame to upper layer
          dn_hdlc_vars.rxFrame_cb(&dn_hdlc_vars.inputBuf[0],dn_hdlc_vars.inputBufFill);
          
@@ -205,7 +206,7 @@ void dn_hdlc_inputWrite(uint8_t b) {
          b = b^DN_HDLC_ESCAPE_MASK;
          dn_hdlc_vars.inputEscaping = FALSE;
       }
-      
+      //printf(">0x%02X", b);
       // add byte to input buffer
       dn_hdlc_vars.inputBuf[dn_hdlc_vars.inputBufFill] = b;
       dn_hdlc_vars.inputBufFill++;

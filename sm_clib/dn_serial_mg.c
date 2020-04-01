@@ -5,9 +5,13 @@ HDLC library.
 
 \license See attached DN_LICENSE.txt.
 */
-
+#include <stdio.h>
 #include "dn_serial_mg.h"
 #include "dn_hdlc.h"
+
+// Data type information
+#include "compiler.h"
+#include "main.h"
 
 //=========================== variables =======================================
 
@@ -69,7 +73,16 @@ dn_err_t dn_serial_mg_initiateConnect() {
    payload[0] = DN_API_VERSION;             // version
    payload[1] = dn_serial_mg_vars.txPacketId;  // cliSeqNo
    payload[2] = 0;                          // mode
+
+
+   // remember state
+   dn_serial_mg_vars.status = DN_SERIAL_ST_HELLO_SENT;
+   // indicate state change
+   if (dn_serial_mg_vars.statusChangeCb) {
+      dn_serial_mg_vars.statusChangeCb(dn_serial_mg_vars.status);
+   }
    
+
    // send hello packet
    dn_serial_sendRequestNoCheck(
       SERIAL_CMID_HELLO,     // cmdId
@@ -79,10 +92,15 @@ dn_err_t dn_serial_mg_initiateConnect() {
       sizeof(payload),       // length
       NULL                   // replyCb
    );
-   
+  /*
+   * THIS NEEDS TO BE DONE BEFORE SENDING OR ELSE ON SLOWER CPU AND FASTER PORT THE RESPONSE WILL PRECEDE THE STATE CHANGE
    // remember state
    dn_serial_mg_vars.status = DN_SERIAL_ST_HELLO_SENT;
-   
+   // indicate state change
+   if (dn_serial_mg_vars.statusChangeCb) {
+      dn_serial_mg_vars.statusChangeCb(dn_serial_mg_vars.status);
+   }
+   */
    return DN_ERR_NONE;
 }
 
@@ -157,6 +175,7 @@ void dn_serial_mg_rxHdlcFrame(uint8_t* rxFrame, uint8_t rxFrameLen) {
    
    // assert length is OK
    if (rxFrameLen<4) {
+	   printf("Short frame!");
       return;
    }
    
@@ -172,7 +191,7 @@ void dn_serial_mg_rxHdlcFrame(uint8_t* rxFrame, uint8_t rxFrameLen) {
    // check if valid packet ID
    if (isAck) {
       // ACK, dispatch
-      
+	   //printf("Ack frame!\n");
       if (length>0) {
          dn_serial_mg_dispatch_response(cmdId,payload,length);
       }
@@ -186,7 +205,7 @@ void dn_serial_mg_rxHdlcFrame(uint8_t* rxFrame, uint8_t rxFrameLen) {
          dn_serial_mg_vars.rxPacketIdInit   = TRUE;
          dn_serial_mg_vars.rxPacketId       = seqNum;
       }
-      
+      //printf("Data frame!\n");
       // ACK
       if (shouldAck) {
          dn_hdlc_outputOpen();
@@ -200,27 +219,41 @@ void dn_serial_mg_rxHdlcFrame(uint8_t* rxFrame, uint8_t rxFrameLen) {
       
       switch (cmdId) {
          case SERIAL_CMID_HELLO_RESPONSE:
-            if (
-                  length>=5 &&
-                  payload[HELLO_RESP_OFFS_RC]      == 0 &&
-                  payload[HELLO_RESP_OFFS_VERSION] == DN_API_VERSION
-               ) {
-               // change state
-               dn_serial_mg_vars.status = DN_SERIAL_ST_CONNECTED;
-               // record manager sequence number
-               dn_serial_mg_vars.rxPacketIdInit     = TRUE;
-               dn_serial_mg_vars.rxPacketId         = payload[HELLO_RESP_OFFS_MGRSEQNO];
-               // indicate state change
-               if (dn_serial_mg_vars.statusChangeCb) {
-                  dn_serial_mg_vars.statusChangeCb(dn_serial_mg_vars.status);
-               }
-            };
+            if (length>=5)
+			{
+				switch (payload[HELLO_RESP_OFFS_RC])
+				{
+				case 0:
+					if (payload[HELLO_RESP_OFFS_VERSION] == DN_API_VERSION)
+					{
+						//printf("Got Hello response, Dust manager CONNECTED!\n");
+					   // change state
+					   dn_serial_mg_vars.status = DN_SERIAL_ST_CONNECTED;
+					   // record manager sequence number
+					   dn_serial_mg_vars.rxPacketIdInit     = TRUE;
+					   dn_serial_mg_vars.rxPacketId         = payload[HELLO_RESP_OFFS_MGRSEQNO];
+					   // indicate state change
+					   if (dn_serial_mg_vars.statusChangeCb) {
+						  dn_serial_mg_vars.statusChangeCb(dn_serial_mg_vars.status);
+					   }
+					}
+				break;
+				case 1:
+					printf("Got Hello response, client's protocol version %d is not supported, Protocol version supported by this Manager is %d.\n",
+							DN_API_VERSION, payload[HELLO_RESP_OFFS_VERSION]);
+					break;
+				case 2:
+					printf("Got Hello response, the manager is running a mode that does not support the Serial API.\n");
+					break;
+				}
+            }
             break;
          case SERIAL_CMID_MGR_HELLO:
             if (
                   length>=2
                ) {
                // change state
+            	printf("Mgr hello! DISCONNECTED\n");
                dn_serial_mg_vars.status = DN_SERIAL_ST_DISCONNECTED;
                // indicate state change
                if (dn_serial_mg_vars.statusChangeCb) {
@@ -230,6 +263,7 @@ void dn_serial_mg_rxHdlcFrame(uint8_t* rxFrame, uint8_t rxFrameLen) {
             break;
          default:
             // dispatch
+        	//printf("Mgr Dispach!\n");
             if (length>0 && dn_serial_mg_vars.requestCb!=NULL && isRepeatId==FALSE) {
                dn_serial_mg_vars.requestCb(cmdId,control,payload,length);
             }
@@ -241,9 +275,12 @@ void dn_serial_mg_rxHdlcFrame(uint8_t* rxFrame, uint8_t rxFrameLen) {
 void dn_serial_mg_dispatch_response(uint8_t cmdId, uint8_t* payload, uint8_t length) {
    uint8_t rc;
    
+  // printf("Dispach response!\n");
+
    rc = payload[0];
    if (cmdId==dn_serial_mg_vars.replyCmdId && dn_serial_mg_vars.replyCb!=NULL) {
       
+	   //printf("Dispach response CAllback!\n");
       // call the callback
       (dn_serial_mg_vars.replyCb)(cmdId,rc,&payload[1],length-1);
       

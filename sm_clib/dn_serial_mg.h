@@ -25,6 +25,12 @@ Serial connector.
 
 // return code
 #define DN_SERIAL_RC_OK                0x00
+// smartmesh return codes
+#define DN_SERIAL_NOT_FOUND            18
+#define DN_SERIAL_INV_STATE            17
+#define DN_SERIAL_NACK                 14
+#define DN_SERIAL_END_OF_LIST          11
+#define DN_SERIAL_INVALID_ARGUMENT     2
 
 // connection states
 #define DN_SERIAL_ST_DISCONNECTED      0x00
