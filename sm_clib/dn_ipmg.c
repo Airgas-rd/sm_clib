@@ -4151,7 +4151,7 @@ void dn_ipmg_rxSerialRequest(uint8_t cmdId, uint8_t flags, uint8_t* payload, uin
             case DN_EVENTID_EVENTJOINFAILED:
 
                 // verify len
-                if (len<DN_EVENTJOINDFAILED_NOTIF_LEN) {
+                if (len<DN_EVENTJOINFAILED_NOTIF_LEN) {
                     return;
                 }
 
@@ -4161,7 +4161,7 @@ void dn_ipmg_rxSerialRequest(uint8_t cmdId, uint8_t flags, uint8_t* payload, uin
 				notif_eventJoinFailed->eventId = eventId;
 				// parse the notification
 				memcpy(&notif_eventJoinFailed->macAddress[0],&payload[DN_EVENTJOINFAILED_NOTIF_OFFS_MACADDRESS],8);
-				dn_read_uint8_t(&notif_eventJoinFailed->reason,&payload[DN_EVENTJOINFAILED_NOTIF_OFFS_REASON]);
+				dn_read_uint16_t(&notif_eventJoinFailed->reason,&payload[DN_EVENTJOINFAILED_NOTIF_OFFS_REASON]);
 
 
                 // call the notif callback
@@ -4171,7 +4171,7 @@ void dn_ipmg_rxSerialRequest(uint8_t cmdId, uint8_t flags, uint8_t* payload, uin
             case DN_EVENTID_EVENTINVALIDMIC:
 
                 // verify len
-                if (len<DN_EVENTINVALIDEMIC_NOTIF_LEN) {
+                if (len<DN_EVENTINVALIDMIC_NOTIF_LEN) {
                     return;
                 }
 
