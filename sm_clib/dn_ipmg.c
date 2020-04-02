@@ -3855,6 +3855,8 @@ void dn_ipmg_rxSerialRequest(uint8_t cmdId, uint8_t flags, uint8_t* payload, uin
    dn_ipmg_eventPacketSent_nt* notif_eventPacketSent;
    dn_ipmg_eventMoteCreate_nt* notif_eventMoteCreate;
    dn_ipmg_eventMoteDelete_nt* notif_eventMoteDelete;
+   dn_ipmg_eventJoinFailed_nt* notif_eventJoinFailed;
+   dn_ipmg_eventInvalidMIC_nt* notif_eventInvalidMIC;
    
    uint8_t  notifType;
    uint8_t  subNotifType;
@@ -4146,7 +4148,45 @@ void dn_ipmg_rxSerialRequest(uint8_t cmdId, uint8_t flags, uint8_t* payload, uin
                dn_ipmg_vars.notifCb(DN_NOTIFID_NOTIFEVENT,DN_EVENTID_EVENTMOTEDELETE);
                
                break;
-               
+            case DN_EVENTID_EVENTJOINFAILED:
+
+                // verify len
+                if (len<DN_EVENTJOINDFAILED_NOTIF_LEN) {
+                    return;
+                }
+
+                // cast notifBuf
+				notif_eventJoinFailed = (dn_ipmg_eventJoinFailed_nt*)dn_ipmg_vars.notifBuf;
+
+				notif_eventJoinFailed->eventId = eventId;
+				// parse the notification
+				memcpy(&notif_eventJoinFailed->macAddress[0],&payload[DN_EVENTJOINFAILED_NOTIF_OFFS_MACADDRESS],8);
+				dn_read_uint8_t(&notif_eventJoinFailed->reason,&payload[DN_EVENTJOINFAILED_NOTIF_OFFS_REASON]);
+
+
+                // call the notif callback
+                dn_ipmg_vars.notifCb(DN_NOTIFID_NOTIFEVENT,DN_EVENTID_EVENTJOINFAILED);
+
+            	break;
+            case DN_EVENTID_EVENTINVALIDMIC:
+
+                // verify len
+                if (len<DN_EVENTINVALIDEMIC_NOTIF_LEN) {
+                    return;
+                }
+
+                // cast notifBuf
+				notif_eventInvalidMIC = (dn_ipmg_eventInvalidMIC_nt*)dn_ipmg_vars.notifBuf;
+
+				notif_eventInvalidMIC->eventId = eventId;
+				// parse the notification
+				memcpy(&notif_eventInvalidMIC->macAddress[0],&payload[DN_EVENTINVALIDMIC_NOTIF_OFFS_MACADDRESS],8);
+
+
+                // call the notif callback
+                dn_ipmg_vars.notifCb(DN_NOTIFID_NOTIFEVENT,DN_EVENTID_EVENTINVALIDMIC);
+
+            	break;
             default:
                // unknown subNotifType
                break;

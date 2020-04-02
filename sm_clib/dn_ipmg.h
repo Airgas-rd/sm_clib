@@ -84,6 +84,8 @@ C library to connect to a SmartMesh IP Manager.
 #define DN_EVENTID_EVENTPACKETSENT          0xc
 #define DN_EVENTID_EVENTMOTECREATE          0xd
 #define DN_EVENTID_EVENTMOTEDELETE          0xe
+#define DN_EVENTID_EVENTJOINFAILED			0xf
+#define DN_EVENTID_EVENTINVALIDMIC			0x10
 
 //===== parameter IDs
 // The SmartMesh IP Manager API has no param IDs
@@ -669,6 +671,15 @@ C library to connect to a SmartMesh IP Manager.
 #define DN_EVENTMOTEDELETE_NOTIF_OFFS_MOTEID                         8
 #define DN_EVENTMOTEDELETE_NOTIF_LEN                                 10
 
+// eventJoinFailed
+#define DN_EVENTJOINFAILED_NOTIF_OFFS_MACADDRESS                     0
+#define DN_EVENTJOINFAILED_NOTIF_OFFS_REASON                              8
+#define DN_EVENTJOINFAILED_NOTIF_LEN                                 9
+
+// eventInvalidMIC
+#define DN_EVENTINVALIDMIC_NOTIF_OFFS_MACADDRESS                     0
+#define DN_EVENTINVALIDMIC_NOTIF_LEN                                 8
+
 //=========================== typedef =========================================
 
 //=== reply types
@@ -1093,6 +1104,17 @@ typedef struct {
    uint8_t    macAddress[8];
    uint16_t   moteId;
 } dn_ipmg_eventMoteDelete_nt;
+
+typedef struct {
+   uint32_t   eventId;
+   uint8_t    macAddress[8];
+   uint16_t   reason;
+} dn_ipmg_eventJoinFailed_nt;
+
+typedef struct {
+   uint32_t   eventId;
+   uint8_t    macAddress[8];
+} dn_ipmg_eventInvalidMIC_nt;
 
 //=== callback signature
 typedef void (*dn_ipmg_notif_cbt)(uint8_t cmdId, uint8_t subCmdId);
