@@ -1108,7 +1108,7 @@ typedef struct {
 typedef struct {
    uint32_t   eventId;
    uint8_t    macAddress[8];
-   uint16_t   reason;
+   uint8_t   reason;
 } dn_ipmg_eventJoinFailed_nt;
 
 typedef struct {

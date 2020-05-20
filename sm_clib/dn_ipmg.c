@@ -4161,7 +4161,7 @@ void dn_ipmg_rxSerialRequest(uint8_t cmdId, uint8_t flags, uint8_t* payload, uin
 				notif_eventJoinFailed->eventId = eventId;
 				// parse the notification
 				memcpy(&notif_eventJoinFailed->macAddress[0],&payload[DN_EVENTJOINFAILED_NOTIF_OFFS_MACADDRESS],8);
-				dn_read_uint16_t(&notif_eventJoinFailed->reason,&payload[DN_EVENTJOINFAILED_NOTIF_OFFS_REASON]);
+				notif_eventJoinFailed->reason = payload[DN_EVENTJOINFAILED_NOTIF_OFFS_REASON];
 
 
                 // call the notif callback
